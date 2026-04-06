@@ -22,9 +22,6 @@ const getExpenses = async (req, res) => {
 // @access  Private
 const addExpense = async (req, res) => {
   try {
-    console.log('--- addExpense ---');
-    console.log('Incoming req.body:', req.body);
-
     let { amount, category, description, date } = req.body;
 
     // 1. Validation runs FIRST, before any DB query
@@ -33,8 +30,6 @@ const addExpense = async (req, res) => {
       return res.status(400).json({ message: 'Invalid amount' });
     }
     const parsedAmount = Number(amount);
-    console.log('Parsed amount:', parsedAmount);
-    
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({ message: 'Invalid amount' }); // Early return
     }
@@ -58,9 +53,11 @@ const addExpense = async (req, res) => {
       return res.status(400).json({ message: 'Invalid date' });
     }
 
-    // 2. Execute DB Query using purely validated & parsed variables
+    description = description !== undefined ? description : null;
+
+    // 2. Execute DB Query using purely validated & parsed variables with explicit postgres type casts
     const newExpense = await pool.query(
-      'INSERT INTO expenses (user_id, amount, category, description, date) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      'INSERT INTO expenses (user_id, amount, category, description, date) VALUES ($1::integer, $2::numeric, $3::varchar, $4::text, $5::date) RETURNING *',
       [req.user.id, parsedAmount, category, description, date]
     );
 
@@ -76,9 +73,6 @@ const addExpense = async (req, res) => {
 // @access  Private
 const updateExpense = async (req, res) => {
   try {
-    console.log('--- updateExpense ---');
-    console.log('Incoming req.body:', req.body);
-
     const { id } = req.params;
     let { amount, category, description, date } = req.body;
     
@@ -88,8 +82,6 @@ const updateExpense = async (req, res) => {
     // Validate Amount if present
     if (amount !== undefined && amount !== null) {
       const parsedAmount = Number(amount);
-      console.log('Parsed amount:', parsedAmount);
-      
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return res.status(400).json({ message: 'Invalid amount' }); // Early return
       }
@@ -119,9 +111,9 @@ const updateExpense = async (req, res) => {
 
     description = description !== undefined ? description : null;
 
-    // 2. Execute DB Query using COALESCE with the safely validated bindings
+    // 2. Execute DB Query using COALESCE with the safely validated bindings, including explicit postgres type casts
     const updatedExpense = await pool.query(
-      'UPDATE expenses SET amount = COALESCE($1, amount), category = COALESCE($2, category), description = COALESCE($3, description), date = COALESCE($4, date) WHERE id = $5 AND user_id = $6 RETURNING *',
+      'UPDATE expenses SET amount = COALESCE($1::numeric, amount), category = COALESCE($2::varchar, category), description = COALESCE($3::text, description), date = COALESCE($4::date, date) WHERE id = $5 AND user_id = $6 RETURNING *',
       [queryAmount, category, description, date, id, req.user.id]
     );
 

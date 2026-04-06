@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -30,12 +30,22 @@ app.use('/api/auth', authRoutes);
 app.use('/api/expenses', expensesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// Catch payload too large global errors
+// Health Check Route
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'SpendWise API is running'
+  });
+});
+
+// Global Error Handling
 app.use((err, req, res, next) => {
   if (err.type === 'entity.too.large') {
     return res.status(413).json({ message: 'File too large. Please use a smaller image.' });
   }
-  next(err);
+  
+  console.error(err.stack);
+  res.status(500).json({ message: 'Server Error', error: err.message });
 });
 
 // Port configuration

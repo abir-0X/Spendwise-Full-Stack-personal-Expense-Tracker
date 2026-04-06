@@ -108,7 +108,6 @@ const getMe = async (req, res) => {
 // @access  Private
 const updateProfilePhoto = async (req, res) => {
   try {
-    console.log("Profile photo update hit");
     const photo = req.body.profile_photo || req.body.photo;
     if (!photo) {
       return res.status(400).json({ message: 'No photo provided' });
