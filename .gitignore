@@ -74,4 +74,9 @@ build/
 backend/node_modules/
 frontend/node_modules/
 frontend/dist/
+<<<<<<< HEAD
 Notes.txt
+=======
+
+Notes.txt
+>>>>>>> 3d67322af95931356d3747d49f8df149bca015f8
