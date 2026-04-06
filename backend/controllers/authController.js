@@ -25,7 +25,7 @@ const registerUser = async (req, res) => {
 
     // Create user
     const newUser = await pool.query(
-      'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email',
+      'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email, profile_photo',
       [name, email, password_hash]
     );
 
@@ -79,6 +79,7 @@ const loginUser = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        profile_photo: user.profile_photo,
       },
       token,
     });
@@ -102,8 +103,45 @@ const getMe = async (req, res) => {
   }
 };
 
+// @desc    Update user profile photo
+// @route   PUT /api/auth/profile-photo
+// @access  Private
+const updateProfilePhoto = async (req, res) => {
+  try {
+    console.log("Profile photo update hit");
+    const photo = req.body.profile_photo || req.body.photo;
+    if (!photo) {
+      return res.status(400).json({ message: 'No photo provided' });
+    }
+
+    // Trim unnecessary metadata if present
+    const base64Data = photo.replace(/^data:image\/\w+;base64,/, '');
+
+    // Reject images larger than ~2MB
+    const sizeInBytes = Math.ceil((base64Data.length * 3) / 4);
+    if (sizeInBytes > 2 * 1024 * 1024) {
+      return res.status(413).json({ message: 'Image too large. Please upload a smaller file.' });
+    }
+
+    const updatedUser = await pool.query(
+      'UPDATE users SET profile_photo = $1 WHERE id = $2 RETURNING id, name, email, profile_photo',
+      [base64Data, req.user.id]
+    );
+
+    if (updatedUser.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(updatedUser.rows[0]);
+  } catch (error) {
+    console.error('Error in updateProfilePhoto:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getMe,
+  updateProfilePhoto,
 };
